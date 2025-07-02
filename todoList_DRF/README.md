@@ -3,6 +3,14 @@
 간단한 Todo API를 구현한 Django REST Framework(DRF) 기반의 학습용 프로젝트입니다. 이 프로젝트는 API 설계, 직렬화, 뷰셋, 라우팅 등 DRF의 기본 개념을 실습하는 데 초점을 맞춥니다.
 
 
+
+
+### fly
+
+[fly](https://todolist-drf-green-shape-2259.fly.dev/)
+
+
+
 ---
 
 ![이미지](https://blogger.googleusercontent.com/img/b/R29vZ2xl/AVvXsEiam-3oMKCofzrcmRmwjoEU8BAbaUdI-6je0JvicSwlU42sOr8XCaS70PItkK4tIi29M1z_g35pqELO8HWZXzs9oiZ3wrzO4kw-VvFKs5GRGdj40449nEEUDp3EipUOHzFf9FGLYu2OXWukAeRlLon5pQtQz_5uBq0zxg4KDcuqiBMOjaqRzmOgTnFHQMeI/s2296/2025-07-02%2013%2015%2022.png)
