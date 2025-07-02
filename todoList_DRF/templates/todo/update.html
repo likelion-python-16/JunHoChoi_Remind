@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container" id="todoCreatePage">
+	<h2>Update Todo</h2>
+		<div>
+			<label for="name">Name:</label>
+			<input type="text" name="name" id="name">
+		</div>
+		<div>
+			<label for="description">Description:</label>
+			<textarea name="description" id="description"></textarea>
+		</div>
+		<div>
+			<label for="complete">Complete:  </label>
+			<input type="checkbox" name="complete" id="complete">
+		</div>
+    <div>
+      <label for="completed_at">Completed At :    </label>
+      <input type="datetime-local" name="completed_at" id="completed_at">
+	  </div>
+
+    <div>
+      <label for="image">Images:</label>
+      <input type="file" name="image" id="image">
+    </div>
+
+		<div>
+			<label for="exp">Experience Points:</label>
+			<input type="number" name="exp" id="exp" min="0">
+		</div>
+		<button type="submit" id="todoUpdate">Update</button>
+</div>
+
+<script>
+  // --- 1. 초기화 ---
+  document.addEventListener("DOMContentLoaded", init);
+
+  function init() {
+    const pk = getTodoId(); // 2. URL에서 pk 추출
+    loadTodoIntoForm(pk);   // 3. pk로 Todo 데이터 로드
+
+    // --- 5. 업데이트 버튼 클릭 시 처리 ---
+    document.querySelector('#todoUpdate').addEventListener('click', function () {
+      updateTodo(pk);
+    });
+  }
+
+  // --- 3. URL에서 pk 추출 ---
+  function getTodoId() {
+    return window.location.pathname.split('/').filter(Boolean).pop();
+    // 예: /todo/update/5/ -> ["todo", "update", "5"] -> pop() => "5"
+  }
+
+  // --- 4. 기존 todo 데이터를 로드 & 폼 채우기 ---
+  function loadTodoIntoForm(pk) {
+    axiosInstance
+      .get(`${TODO_API_RETRIEVE_URL}${pk}/`) // 엔드포인트 : url 주소 호출
+      .then(response => {
+        const todo = response.data;
+        // 폼 요소 채우기
+        document.querySelector('#name').value = todo.name;
+        document.querySelector('#description').value = todo.description;
+        document.querySelector('#complete').checked = todo.complete;
+       
+
+        if (todo.completed_at) {
+          // datetime-local 형식 맞추기
+          const dt = new Date(todo.completed_at);
+          const local = dt.toISOString().slice(0, 16);
+          document.querySelector('#completed_at').value = local;
+        }
+
+        document.querySelector('#exp').value = todo.exp;
+      })
+      .catch(error => {
+        console.error('데이터 로드 중 오류 발생:', error);
+        alert('할 일 데이터를 불러오지 못했습니다.');
+      });
+  }
+
+  // --- 5. 수정 요청 보내기 ---
+  function updateTodo(pk) {
+    const data = {
+      name: document.querySelector('#name').value,
+      description: document.querySelector('#description').value,
+      complete: document.querySelector('#complete').checked,
+      completed_at: document.querySelector('#completed_at').value || null,
+      exp: parseInt(document.querySelector('#exp').value, 10) || 0,
+    };
+
+    axiosInstance
+      .put(`${TODO_API_UPDATE_URL}${pk}/`, data)
+      .then(response => {
+        alert('할 일이 성공적으로 수정되었습니다.');
+        redirectToDetail(pk);        
+      })
+      .catch(error => {
+        console.error('업데이트 중 오류 발생:', error);
+        alert('할 일 수정 중 오류가 발생했습니다.');
+      });
+}
+
+
+
+
+function redirectToDetail(pk)  {
+  window.location.href = `/todo/detail/${pk}/`;
+}
+</script>
+
+{% endblock %}

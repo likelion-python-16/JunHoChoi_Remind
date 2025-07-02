@@ -1,0 +1,23 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    {% include "head.html" %}    
+    <script src="{% static 'js/apiURL.js' %}"></script>
+</head>    
+<body>
+    <div class="main-container">
+        {% include "header.html" %}
+        {% block content %}{% endblock %}
+
+     </div>    
+        {% include "footer.html" %}
+   
+    <!-- Global Scripts 순서가 중요하다  -->
+    <script src="{% static 'js/getCookie.js' %}"></script>
+    <script src="{% static 'js/axiosInstance.js' %}"></script>    
+    <script src="{% static 'js/utils.js' %}"></script>
+</body>
+</html>
+

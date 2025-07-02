@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block content %}
+
+<div class="container" id="todoCreatePage">
+	<h2>Create a New Todo</h2>
+		<div>
+			<label for="name">Name:</label>
+			<input type="text" name="name" id="name">
+		</div>
+		<div>
+			<label for="description">Description:</label>
+			<textarea name="description" id="description"></textarea>
+		</div>
+		<div>
+			<label for="complete">Complete:</label>
+			<input type="checkbox" name="complete" id="complete">
+		</div>
+    <div style="display: none;">
+			<label for="completed_at">Completed At:</label>
+      <input type="datetime-local" name="completed_at" id="completed_at">
+		</div>
+    <div>
+      <label for="image">Images:</label>
+      <input type="file" name="image" id="image">
+	  </div>
+		<div>
+			<label for="exp">Experience Points:</label>
+			<input type="number" name="exp" id="exp" min="0">
+		</div>
+		<button type="submit" id="todoCreate">Create</button>
+</div>
+
+
+
+<script>
+// 1. 문서가 완전히 로드되면 초기화 실행 
+document.addEventListener('DOMContentLoaded', init);
+
+// 2. UI 이벤트
+function init() {
+  bindUIEvents(); // 버튼에 클릭 이벤트 연결
+}
+
+// 3. UI 이벤트 바인딩
+// 클릭, 스크롤, 탭키 ... 문서로딩...
+function bindUIEvents() {
+  const btn = document.getElementById('todoCreate');
+  if (!btn) return;
+  btn.addEventListener('click', onCreateClick); // 클릭 시 4번 실행
+}
+
+// 데이터 수집 및 전송
+function onCreateClick() {
+  //데이터를 폼으로 부터 수집
+  const payload = gatherFormData(); 
+  console.log(" payload  :", payload);
+  //서버에 전송
+  createTodo(payload); 
+}
+
+//  6. API 호출: Todo 생성 요청
+function createTodo(data) {
+  axiosInstance
+    .post(`${TODO_API_CREATE_URL}`, data)
+    .then(onCreateSuccess) // 7번: 성공 시 처리
+    .catch(onCreateError); // 8번: 실패 시 처리
+}
+
+//  7. 생성 성공 핸들러: 목록 페이지로 이동 
+function onCreateSuccess(response) {
+  // 생성 후 목록 페이지로 이동
+  window.location.href = '/todo/list/';
+}
+
+
+// --- 8. 생성 실패 핸들러: 에러 알림 --------------------------------------
+function onCreateError(error) {
+  console.log("🔥 오류 상세:", error.response?.data || error);
+  console.error('Todo 생성 실패:', error);
+  alert('Todo 생성에 실패했습니다.');
+}
+
+
+function gatherFormData() {
+   //이미지 처리
+  const formData =new FormData();
+
+  //숫자처리
+  // let expVal = document.getElementById('exp').value;
+  // if (expVal === '') expVal = 0; 
+  const expInput = document.getElementById('exp');
+  const expVal = expInput && expInput.value.trim() !=="" ? Number(expInput.value) : 0 ;
+
+  
+
+  //날짜처리
+  //  const completedAtInput = document.getElementById('completed_at').value;
+  //  const completedAt = datetimeToString(completedAtInput);
+
+
+   //텍스트 필드 추가
+   formData.append("name", document.getElementById('name').value);
+   formData.append("description", document.getElementById('description').value);
+   formData.append("complete", document.getElementById('complete').checked);
+   //formData.append("completed_at", completedAt);
+   formData.append("exp", Number(expVal));
+   
+   //이미지 파일 추가
+   const imageInput =document.getElementById('image');
+   if(imageInput && imageInput.files.length > 0){  //이미지 파일이 맞는지 이미지 파일 갯수 > 0 클때
+     formData.append('image', imageInput.files[0]); 
+   }
+
+   return formData;
+}
+</script>
+
+
+
+<!--
+// 5. 폼 데이터 수집: 입력값을 객체로 변환 
+{% comment %}
+function gatherFormData() {
+  //데이터 평탄화
+  let expVal = document.getElementById('exp').value;
+  if (expVal === '') expVal = 0; 
+  //파이썬 input("0")
+  // "0" ==0 true  ===false
+  //예상치 못한 자동 변환 때문에 버그가 발생할 가능을 대비하여  === 작성합니다...
+  const completedAtInput = document.getElementById('completed_at').value;
+  // completedAtInput 값이 있으면 -> Date 객체로 변환해서 ISO 형식 문자열로 만들고 없으면 null 설정해라
+  // 자바스크립트 삼항연산자
+
+  const completedAt = completedAtInput ? new Date(completedAtInput).toISOString() : null;
+  return {
+    name:document.getElementById('name').value, // 이 객체 안에 name이라는 키(key) 를 만들고,그 값(value)은 document.getElementById('name').value로 설정해라."
+    description:document.getElementById('description').value,
+    complete:document.getElementById('complete').checked,
+    completed_at: completedAt,
+    exp:Number(expVal),
+  };
+}{% endcomment %}
+-->
+
+
+
+
+{% endblock %}    

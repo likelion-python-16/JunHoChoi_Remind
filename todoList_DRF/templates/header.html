@@ -1,0 +1,36 @@
+{% load static %}
+<div class="headers">
+    <h1> Todo List</h1>
+    <div class="menu-bar menu">
+      <a class="menu-link" href="{% url 'todo:todo_List' %}">📝 할 일 목록</a>
+
+      {% if user.is_authenticated %}
+        <a href="#" id="logoutBtn" class="menu-link logout-link">🚪 로그아웃</a>
+      {% else %}
+        <a class="menu-link" href="{% url 'rest_framework:login' %}?next={% url 'todo:todo_List' %}">🔐 로그인</a>
+        <a class="menu-link" href="{% url 'signup' %}">🆕 회원가입</a>
+      {% endif %}
+    </div>
+</div>
+
+<script>
+  //click event
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("logoutBtn").addEventListener("click", () => {
+      axiosInstance.get("/todo/api/custom-logout/")
+      .then(()=> {
+        window.location.href="{% url 'todo:todo_List' %}"
+      })
+      .catch( err => {
+        console.error("로그아웃 실패:", err);
+        alert("로그아웃 오류가 발생했습니다.");
+      });
+
+    });   
+  });
+
+
+
+
+
+</script>  

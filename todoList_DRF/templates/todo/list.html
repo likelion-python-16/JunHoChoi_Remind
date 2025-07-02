@@ -1,0 +1,426 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+{% if user.is_authenticated %}
+    {# --- 검색바 추가 --- #}
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="검색어를 입력하세요.">
+        <button id="searchBtn" class="btn">검색</button>
+    </div>  
+    {# --- 검색바끝 --- #}
+
+    <div class="todocontainer"></div>
+    <div class="pagination"></div>
+    <div class="todoCreateDiv">
+        <button class="todoCreate" id="createBtn">Todo 등록하기</button>
+    </div>
+{% else %}
+    <p>할 일 목록은 로그인 후 확인하실 수 있습니다.</p>
+{% endif %}
+
+
+
+
+
+
+<script>
+let currentPage = 1;    
+let currentSearch="";
+
+// 1. 문서가 완전히 로드되면 초기화 함수 실행
+document.addEventListener('DOMContentLoaded', init);
+
+// 2. 초기화: UI 이벤트 연결 및 첫 페이지 Todo 목록 로드
+function init() {
+    UIEvents(); // 2-1. 버튼 이벤트 연결
+    loadTodoList(1); // 2-2. 첫 페이지 목록 불러오기
+}
+
+// 2-1. UI 이벤트 바인딩: "Todo 등록하기" 버튼 클릭 시 등록 페이지로 이동
+function UIEvents() {
+    document.getElementById('createBtn').addEventListener('click', onCreateClick);
+
+    // 검색 버튼 이베튼 바인딩
+    document.getElementById("searchBtn").addEventListener("click", onSearchClick);
+
+}
+
+function onSearchClick() {
+   currentSearch=document.getElementById("searchInput").value.trim();
+   loadTodoList(1);
+}
+
+
+
+// 2-1-1. 등록 버튼 클릭 시 /todo/create/로 이동
+function onCreateClick() {
+    window.location.href = '/todo/create/';
+}
+
+
+function fetchTodoData(currentPage, currentSearch=""){    
+    console.log(" fetchTodoData currentPage : ", currentPage, " currentSearch : ", currentSearch);
+
+    // 페이지네이션 데이터 요청
+    return  axiosInstance.get(`${TODO_API_LIST_URL}`,{
+        params: {
+            page:currentPage,
+            search:currentSearch
+        }
+    })
+    .then(res => {
+            res.data
+            console.log("응답데이터 : ", res.data);
+            return res.data;
+        }
+    );
+}
+
+
+// 5. 특정 페이지의 Todo 리스트를 불러오고 렌더링
+function loadTodoList(page) {
+    currentPage = page;
+    fetchTodoData(currentPage, currentSearch)
+        .then(data => {
+            console.log("전체 응답 데이터", data);              
+            console.log("총 개수:", data.count);  // 디버깅용
+
+            const todos = extractTodoArray(data);  // 실제 Todo 배열 추출         
+            renderTodoList(todos);                // 목록 렌더링
+            //페이지네이션 추가
+            renderPagination(data, currentPage);
+        })
+        .catch(err => console.log("리스트 로드 실패", err));
+}
+
+
+
+
+// 3-2. API 응답 형식에 따라 Todo 배열 추출
+function extractTodoArray(data) {
+    // 1) CustomPageNumberPagination 사용 시
+    if (Array.isArray(data.data)) {
+        return data.data;
+    }
+    // 2) 기본 PageNumberPagination 사용 시
+    if (Array.isArray(data.results)) {
+        return data.results;
+    }
+    // 3) Pagination 없이 순수 배열 리턴 시
+    if (Array.isArray(data)) {
+        return data;
+    }
+    return [];
+}
+
+
+
+// 3-3. 추출된 Todo 항목들을 화면에 렌더링
+function renderTodoList(todos) {
+    const container = document.querySelector('.todocontainer');
+    container.innerHTML = '';
+    todos.forEach(todo => container.appendChild(createTodoElement(todo)));
+
+
+    addEventListenersForButtons();
+} 
+
+
+function addEventListenersForButtons() {
+  document.querySelectorAll('.likeBtn').forEach(btn => {
+    btn.removeEventListener('click', likeBtnHandler); // 기존 제거 (선택적)
+    btn.addEventListener('click', likeBtnHandler);
+  });
+
+  document.querySelectorAll('.bookmarkBtn').forEach(btn => {
+    btn.removeEventListener('click', bookmarkBtnHandler);
+    btn.addEventListener('click', bookmarkBtnHandler);
+  });
+}
+
+function likeBtnHandler(e) {
+  e.stopPropagation();
+  toggleLike(e.currentTarget.dataset.id);
+}
+
+function bookmarkBtnHandler(e) {
+  e.stopPropagation();
+  toggleBookmark(e.currentTarget.dataset.bookmarkId);
+}
+
+
+
+// 3-3-1. 단일 Todo 객체를 HTML 요소로 생성
+
+// ... 생략된 기존 코드 유지 ...
+
+function createTodoElement(todo) {
+    const div = document.createElement('div');
+    div.className = 'todo-item';
+
+    if (todo.complete) {
+        div.classList.add('completed');
+    }
+
+    // ✅ HTML 구조
+    div.innerHTML = `
+        <div class="todo-content" style="cursor:pointer;">
+            <p><strong>Name:</strong> ${todo.name}</p>
+            <p><strong>Description:</strong> ${todo.description}</p>
+            <p><strong>Complete:</strong> ${todo.complete}</p>
+            <p><strong>Completed At:</strong> ${datetimeToString(todo.completed_at)}</p>
+            <p><strong>Image:</strong> 
+                ${todo.image ? `<img src="${todo.image}" alt="${todo.name}" width="150">` : ''}
+            </p>
+            <p><strong>Experience Points:</strong> ${todo.exp}</p>
+        </div>
+
+        <div class="todo-actions" style="margin-top: 10px;">
+         
+            <button class="social-btn likeBtn"
+            data-id="${todo.id}"><span class="icon">${todo.is_liked ? '💔' : '❤️'}</span> 
+            <span class="count">${todo.like_count}</span>
+            </button>
+
+            <button class="bookmarkBtn action-button" data-bookmark-id="${todo.id}">🔖 ${todo.bookmark_count || todo.bookmark_count}</button>
+            <button class="commentToggleBtn action-button" data-id="${todo.id}">💬 <span class="count">${todo.comments_count || 0}</span></button>
+            <button class="detail-link action-button" data-id="${todo.id}">MY댓글</button>
+        </div>
+
+        <div class="commentBox" style="display:none; padding: 10px;">
+            <ul class="commentList"></ul>
+            <div style="margin-top: 5px; display: flex; gap: 5px;">
+              <input type="text" class="commentInput" placeholder="댓글을 입력하세요" style="flex: 1; padding: 4px;">
+              <button class="commentSubmit">등록</button>
+            </div>
+        </div>
+
+        <button class="completeBtn">완료</button>
+    `;
+
+    div.querySelector('.todo-content').addEventListener('click', () => detailView(todo.id));
+
+    div.querySelector('.completeBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        toComplete(todo.id);
+    });
+
+    // 좋아요 버튼 이벤트 등록    
+    div.querySelector('.likeBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        toggleLike(todo.id); 
+    });
+
+
+
+    div.querySelector('.bookmarkBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        toggleBookmark(todo.id); 
+    });
+
+    div.querySelector('.commentToggleBtn').addEventListener('click', e => {
+        e.stopPropagation();
+        const commentBox = div.querySelector('.commentBox');
+        commentBox.style.display = (commentBox.style.display === 'none') ? 'block' : 'none';
+        loadComments(todo.id, div.querySelector('.commentList'));
+    });
+
+     // 새창 링크의 이벤트 전파 차단    
+    div.querySelector('.detail-link').addEventListener('click', e => {
+        e.stopPropagation();
+      
+          // 새창 열기 (크기와 위치 지정)
+        window.open(
+            `/interaction/todo/detail/${todo.id}/`, // 열 URL
+            '_blank', // 새창
+            'width=600,height=600,top=100,left=200,scrollbars=yes,resizable=yes' // 옵션
+            ); 
+  
+    });
+
+    div.querySelector('.commentInput')?.addEventListener('click', e => e.stopPropagation());
+
+    div.querySelector('.commentSubmit')?.addEventListener('click', e => {
+        e.stopPropagation();
+        const commentInput = div.querySelector('.commentInput');
+        const content = commentInput.value;
+        if (content.trim()) {
+            postComment(todo.id, content, div.querySelector('.commentList'));
+            commentInput.value = '';
+        }
+    });
+
+    return div;
+}
+
+
+
+function postComment(todoId, content, listElement) {
+  if (!content) return alert("댓글을 입력하세요");
+  axiosInstance.post("/api/interaction/comments/", { todo_pk: todoId, content: content })
+    .then(() => {
+      loadComments(todoId, listElement);
+
+      //댓글 등록 후 count 증가
+      const  todoElement = document.querySelector(`.todo-item`);
+      const countSpan =todoElement?.querySelector('.commentToggleBtn .count');
+
+      if (countSpan) {
+        const currentCount = parseInt(countSpan.textContent || '0', 10);
+        countSpan.textContent = currentCount + 1;
+      }
+
+
+
+    })
+    .catch(error => {
+      console.error("댓글 등록 실패:", error.response?.data || error);
+      alert("댓글 등록 실패:\n" + JSON.stringify(error.response?.data, null, 2));
+    });
+}
+
+function loadComments(todoId, listElement) {
+  axiosInstance.get(`/api/interaction/comments/`, { params: { todo_pk: todoId } })
+    .then(res => {
+      const payload = Array.isArray(res.data) ? res.data : Array.isArray(res.data.results) ? res.data.results : (res.data.data || []);
+      listElement.innerHTML = '';
+      payload.forEach(c => {
+        const li = document.createElement('li');
+        li.innerHTML = `${c.user.username || c.username}: ${c.content} 
+          <button class="comment-like-btn" data-id="${c.id}">👍 ${c.like_count}</button>`;
+        li.querySelector('.comment-like-btn')?.addEventListener('click', e => {
+          e.stopPropagation();
+          toggleCommentLike(c.id);
+        });
+        listElement.appendChild(li);
+      });
+    })
+    .catch(err => console.error('댓글 로드 실패:', err));
+}
+
+function toggleCommentLike(commentId) {
+ axiosInstance.post(`/api/interaction/commentlikes/${commentId}/toggle/`)
+    .then(res => {
+      // 좋아요 처리 성공 후 전체 댓글 다시 로드
+      const commentBtn = document.querySelector(`.comment-like-btn[data-id="${commentId}"]`);
+      const todoElement = commentBtn.closest('.todo-item');
+      const todoId = todoElement?.querySelector('.likeBtn')?.dataset?.id;
+      const listElement = todoElement?.querySelector('.commentList');
+
+      if (todoId && listElement) {
+        loadComments(todoId, listElement);
+      }
+    })
+    .catch(err => console.error("댓글 좋아요 실패:", err));
+}
+
+
+
+
+
+
+// 3-3-2. 완료 버튼 클릭 시 해당 Todo 항목을 완료 상태로 변경
+//주소 요청이 들어오면 complete을 true로 변경하고, loadTodoList 함수를 실행해라.아니면 완료 실패 메시지를 콘솔로그에 띄워라
+function toComplete(id) { //매개변수 이름 todo.id 값이 전달됨
+    axiosInstance.patch(`${TODO_API_UPDATE_URL}${id}/`, { complete: true })
+        .then(() => loadTodoList(1))
+        .catch(err => console.error('완료 처리 실패:', err));
+}
+
+// 3-3-3. 상세 페이지로 이동
+function detailView(id) {
+    window.location.href = `/todo/detail/${id}/`;
+}
+
+
+
+// 3-4. 페이지네이션 구성 (← 이전, 1 2 3, → 다음)
+
+function renderPagination(data, currentPage) {
+    const wrapper = document.querySelector('.pagination');
+    wrapper.innerHTML = '';
+
+    console.log(" data.total_count  ",data.total_count);
+    
+    //const totalPages = Math.ceil(data.total_count / 5); // ← settings.py의 PAGE_SIZE 기준
+
+    const  totalPages = data.page_count
+
+    // 이전 버튼
+    const prevBtn = document.createElement('button');
+    prevBtn.innerText = '‹';
+    prevBtn.disabled = !data.previous;
+    prevBtn.addEventListener('click', () => loadTodoList(currentPage - 1));
+    wrapper.appendChild(prevBtn);
+
+    // 페이지 번호 버튼
+    for (let i = 1; i <= totalPages; i++) {
+        const btn = document.createElement('button');
+        btn.innerText = i;
+        if (i === currentPage) {
+            btn.disabled = true;
+            btn.classList.add('active');
+        }
+        btn.addEventListener('click', () => loadTodoList(i));
+        wrapper.appendChild(btn);
+    }
+
+    // 다음 버튼
+    const nextBtn = document.createElement('button');
+    nextBtn.innerText = '›';
+    nextBtn.disabled = !data.next;
+    nextBtn.addEventListener('click', () => loadTodoList(currentPage + 1));
+    wrapper.appendChild(nextBtn);
+}
+
+
+
+// 좋아요 토글 함수
+function toggleLike(id) {
+    axiosInstance.post(`/api/interaction/likes/${id}/toggle/`)
+        .then(res => {
+            const { is_liked, like_count } = res.data;
+            const btn = document.querySelector(`.likeBtn[data-id="${id}"]`);
+            if (btn) btn.innerHTML = `${is_liked ? '💔' : '❤️'} <span class="count">${like_count}</span>`;
+        })
+        .catch(err => console.error(" 좋아요 토글 실패:", err));
+}
+
+
+
+
+function toggleBookmark(id) {
+    axiosInstance.post(`/api/interaction/bookmarks/${id}/toggle/`)
+        .then(res => {
+            const { is_bookmarked, bookmark_count } = res.data;
+            console.log(`is_bookmarked: ${is_bookmarked}, bookmark_count: ${bookmark_count}`);
+            const btn = document.querySelector(`.bookmarkBtn[data-bookmark-id="${id}"]`);
+            if (btn) btn.innerHTML = `🔖 <span class="count">${bookmark_count}</span>`;
+        })
+        .catch(err => console.error(' 북마크 토글 실패:', err));
+}
+
+
+// ✅ 이벤트 위임 방식 추가 (비동기 렌더링 문제 해결)
+document.addEventListener('click', function(e) {
+    const likeBtn = e.target.closest('.likeBtn');
+    if (likeBtn) {
+        e.stopPropagation();
+        toggleLike(likeBtn.dataset.id);
+        return;
+    }
+
+    const bookmarkBtn = e.target.closest('.bookmarkBtn');
+    if (bookmarkBtn) {
+        e.stopPropagation();
+        toggleBookmark(bookmarkBtn.dataset.bookmarkId);
+        return;
+    }
+});
+</script>
+
+
+
+{% endblock content %}

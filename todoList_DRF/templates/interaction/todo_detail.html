@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>{{ todo.name }}</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+    }
+    .section {
+      border-top: 1px solid #ccc;
+      padding: 10px 0;
+    }
+    .icon {
+      font-size: 1.2em;
+      margin-right: 5px;
+    }
+    .bold {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ✅ 제목 & 설명 -->
+  <h2 class="bold">{{ todo.name }}</h2>
+  <p>{{ todo.description }}</p>
+
+  <!-- ✅ 좋아요 수 -->
+  <div class="section">
+    <span class="icon">❤️</span> 좋아요 수: {{ like_count }}
+  </div>
+
+  <!-- ✅ 좋아요 상태 -->
+  <div class="section">
+    {% if user.is_authenticated %}
+      {% if like_obj.is_like %}
+        좋아요를 눌렀지만, 지금은 <strong>취소된 상태</strong>입니다.
+      {% else %}
+        좋아요를 누르지 않은 상태입니다.
+      {% endif %}
+    {% else %}
+      로그인 후 좋아요 상태를 확인할 수 있습니다.
+    {% endif %}
+  </div>
+
+  <!-- ✅ 북마크 상태 -->
+  <div class="section">
+    <span class="icon">📎</span> 북마크 상태: 
+  
+
+    {% if bookmark_obj.is_marked %}
+      되어 있음
+    {% else %}
+      안 되어 있음
+    {% endif %}
+  </div>
+
+  <!-- ✅ 댓글 목록 -->
+  <div class="section">
+    <h3 class="bold">💬 댓글 목록</h3>
+    {% for comment in comments %}
+      <p><strong>{{ comment.user.username }}</strong>: {{ comment.content }}</p>
+    {% empty %}
+      <p>등록된 댓글이 없습니다.</p>
+    {% endfor %}
+  </div>
+
+</body>
+</html>
